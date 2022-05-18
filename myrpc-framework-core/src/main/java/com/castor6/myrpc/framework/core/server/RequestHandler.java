@@ -1,6 +1,6 @@
 package com.castor6.myrpc.framework.core.server;
 
-import com.castor6.myrpc.framework.core.common.ResponseCode;
+import com.castor6.myrpc.framework.core.common.enumclass.ResponseCode;
 import com.castor6.myrpc.framework.core.common.RpcRequest;
 import com.castor6.myrpc.framework.core.common.RpcResponse;
 import org.slf4j.Logger;

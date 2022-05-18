@@ -1,8 +1,7 @@
 package com.castor6.myrpc.framework.core.common;
 
-import lombok.AllArgsConstructor;
+import com.castor6.myrpc.framework.core.common.enumclass.ResponseCode;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import java.io.Serializable;

@@ -7,6 +7,8 @@ import com.castor6.myrpc.framework.core.common.RpcProtocol;
 import com.castor6.myrpc.framework.core.common.RpcRequest;
 import com.castor6.myrpc.framework.core.common.config.ClientConfig;
 import com.castor6.myrpc.framework.core.common.config.PropertiesBootstrap;
+import com.castor6.myrpc.framework.core.common.enumclass.PackageType;
+import com.castor6.myrpc.framework.core.common.enumclass.SerializerCode;
 import com.castor6.myrpc.framework.core.common.event.MyRpcListenerLoader;
 import com.castor6.myrpc.framework.core.common.util.CommonUtils;
 import com.castor6.myrpc.framework.core.proxy.javassist.JavassistProxyFactory;
@@ -17,6 +19,10 @@ import com.castor6.myrpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import com.castor6.myrpc.framework.core.router.MyRandomRouter;
 import com.castor6.myrpc.framework.core.router.MyRotateRouter;
 import com.castor6.myrpc.framework.core.router.MyRouter;
+import com.castor6.myrpc.framework.core.serialize.CommonSerializer;
+import com.castor6.myrpc.framework.core.serialize.FastJsonSerializer;
+import com.castor6.myrpc.framework.core.serialize.JdkSerializer;
+import com.castor6.myrpc.framework.core.serialize.KryoSerializer;
 import com.castor6.myrpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -30,10 +36,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SEND_QUEUE;
-import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SUBSCRIBE_SERVICE_LIST;
-import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
-import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.*;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.*;
 
 /**
  * @author castor6
@@ -88,18 +92,11 @@ public class Client {
                 ch.pipeline().addLast(new ClientHandler());
             }
         });
-        // 监听器加载器相关初始化（监听器是负责处理某类型事件的，加载器负责加载这些监听器）
+        // 监听器加载器相关初始化（监听器是负责处理关于注册中心的某类型事件的，加载器负责加载这些监听器）
         myRpcListenerLoader = new MyRpcListenerLoader();
         myRpcListenerLoader.init();
         // 初始化客户端的配置
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
-        // 初始化路由策略
-        String routerStrategy = clientConfig.getRouterStrategy();
-        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
-            myRouter = new MyRandomRouter();
-        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
-            myRouter = new MyRotateRouter();
-        }
         // 初始化代理方式
         RpcFactory rpcFactory;
         if ("javassist".equals(clientConfig.getProxyType())) {
@@ -169,11 +166,10 @@ public class Client {
             while (true) {  // 负责发送请求
                 try {
                     //阻塞模式
-                    RpcRequest data = SEND_QUEUE.take();
-                    String json = JSON.toJSONString(data);
-                    RpcProtocol rpcProtocol = new RpcProtocol(json.getBytes());
-                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getServiceName(), myRouter);    // 负载均衡获取服务提供方的连接
-                    channelFuture.channel().writeAndFlush(rpcProtocol);
+                    RpcRequest rpcRequest = SEND_QUEUE.take();
+                    RpcProtocol rpcProtocol = new RpcProtocol(SERIALIZER.serialize(rpcRequest), PackageType.REQUEST_PACK.getCode(), SERIALIZERCODE);
+                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(rpcRequest.getServiceName(), myRouter);    // 负载均衡获取服务提供方的连接
+                    channelFuture.channel().writeAndFlush(rpcProtocol);     // 发送调用请求
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -181,9 +177,37 @@ public class Client {
         }
     }
 
+    private void initClientConfig(){
+        // 初始化路由策略
+        String routerStrategy = clientConfig.getRouterStrategy();
+        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
+            myRouter = new MyRandomRouter();
+        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
+            myRouter = new MyRotateRouter();
+        }
+        String clientSerialize = clientConfig.getClientSerialize();
+        switch (clientSerialize) {
+            case KRYO_SERIALIZE_TYPE:
+                SERIALIZER = new KryoSerializer();
+                SERIALIZERCODE = SerializerCode.KRYO.getCode();
+                break;
+            case FAST_JSON_SERIALIZE_TYPE:
+                SERIALIZER = new FastJsonSerializer();
+                SERIALIZERCODE = SerializerCode.FAJSON.getCode();
+                break;
+            case JDK_SERIALIZE_TYPE:
+                SERIALIZER = new JdkSerializer();
+                SERIALIZERCODE = SerializerCode.JDK.getCode();
+                break;
+            default:
+                throw new RuntimeException("no match serialize type for " + clientSerialize);
+        }
+    }
+
     public static void main(String[] args) throws Throwable {
         Client client = new Client();
         RpcFactory rpcFactory = client.initClientApplication();
+        client.initClientConfig();
         DataService dataService = rpcFactory.get(DataService.class);
         client.doSubscribeService(DataService.class);
         ConnectionHandler.setBootstrap(client.getBootstrap());

@@ -1,7 +1,7 @@
 package com.castor6.myrpc.framework.core.client;
 
 import com.alibaba.fastjson.JSON;
-import com.castor6.myrpc.framework.core.common.ResponseCode;
+import com.castor6.myrpc.framework.core.common.enumclass.ResponseCode;
 import com.castor6.myrpc.framework.core.common.RpcResponse;
 import com.castor6.myrpc.framework.core.common.RpcProtocol;
 import io.netty.channel.Channel;
@@ -10,6 +10,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
 import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.RESP_MAP;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SERIALIZER;
 
 /**
  * @author castor6
@@ -24,9 +25,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
         //客户端和服务端之间的数据都是以RpcProtocol对象作为基本协议进行的交互
         RpcProtocol rpcProtocol = (RpcProtocol) msg;
         //取出响应报文
-        byte[] reqContent = rpcProtocol.getContent();
-        String json = new String(reqContent,0,reqContent.length);
-        RpcResponse rpcResponse = JSON.parseObject(json, RpcResponse.class);
+        RpcResponse rpcResponse = SERIALIZER.deserialize(rpcProtocol.getContent(), RpcResponse.class);
         //检查方法是否执行成功
         if(rpcResponse.getStatusCode() != ResponseCode.SUCCESS.getCode()){
             rpcResponse.getThrowable().printStackTrace();

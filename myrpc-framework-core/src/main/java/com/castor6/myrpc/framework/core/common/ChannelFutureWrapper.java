@@ -8,7 +8,7 @@ import lombok.ToString;
  * @author castor6
  * @version v1.0
  * @create 2022-05-15 22:56
- * @Description 封装了连接的服务提供者的信息
+ * @Description 封装了连接及其对应的服务提供者的信息
  */
 @Data
 @ToString

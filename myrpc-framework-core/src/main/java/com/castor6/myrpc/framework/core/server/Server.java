@@ -4,10 +4,14 @@ import com.castor6.myrpc.framework.core.common.RpcDecoder;
 import com.castor6.myrpc.framework.core.common.RpcEncoder;
 import com.castor6.myrpc.framework.core.common.config.PropertiesBootstrap;
 import com.castor6.myrpc.framework.core.common.config.ServerConfig;
+import com.castor6.myrpc.framework.core.common.enumclass.SerializerCode;
 import com.castor6.myrpc.framework.core.common.util.CommonUtils;
 import com.castor6.myrpc.framework.core.registy.RegistryService;
 import com.castor6.myrpc.framework.core.registy.URL;
 import com.castor6.myrpc.framework.core.registy.zookeeper.ZookeeperRegister;
+import com.castor6.myrpc.framework.core.serialize.FastJsonSerializer;
+import com.castor6.myrpc.framework.core.serialize.JdkSerializer;
+import com.castor6.myrpc.framework.core.serialize.KryoSerializer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -16,8 +20,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
-import static com.castor6.myrpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
-import static com.castor6.myrpc.framework.core.common.cache.CommonServerCache.PROVIDER_URL_SET;
+import static com.castor6.myrpc.framework.core.common.cache.CommonServerCache.*;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.*;
 
 /**
  * @author castor6
@@ -70,6 +74,23 @@ public class Server {
     public void initServerConfig() {
         ServerConfig serverConfig = PropertiesBootstrap.loadServerConfigFromLocal();
         this.setServerConfig(serverConfig);
+        String serverSerialize = serverConfig.getServerSerialize();
+        switch (serverSerialize) {
+            case KRYO_SERIALIZE_TYPE:
+                SERVER_SERIALIZER = new KryoSerializer();
+                SERVER_SERIALIZER_CODE = SerializerCode.KRYO.getCode();
+                break;
+            case FAST_JSON_SERIALIZE_TYPE:
+                SERVER_SERIALIZER = new FastJsonSerializer();
+                SERVER_SERIALIZER_CODE = SerializerCode.FAJSON.getCode();
+                break;
+            case JDK_SERIALIZE_TYPE:
+                SERVER_SERIALIZER = new JdkSerializer();
+                SERVER_SERIALIZER_CODE = SerializerCode.JDK.getCode();
+                break;
+            default:
+                throw new RuntimeException("no match serialize type for " + serverSerialize);
+        }
     }
 
     /**

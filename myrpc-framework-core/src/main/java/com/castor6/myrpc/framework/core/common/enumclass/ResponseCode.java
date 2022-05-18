@@ -1,4 +1,4 @@
-package com.castor6.myrpc.framework.core.common;
+package com.castor6.myrpc.framework.core.common.enumclass;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

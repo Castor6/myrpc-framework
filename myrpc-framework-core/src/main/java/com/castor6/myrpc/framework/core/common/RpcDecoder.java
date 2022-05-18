@@ -1,5 +1,6 @@
 package com.castor6.myrpc.framework.core.common;
 
+import com.castor6.myrpc.framework.core.common.enumclass.PackageType;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -26,7 +27,6 @@ public class RpcDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
         if (byteBuf.readableBytes() >= BASE_LENGTH) {
-            //防止收到一些体积过大的数据包
             int beginReader;
             while (true) {
                 // 标记协议的开头，用以解决拆包问题，能让当前请求剩余的下一次的数据包获取时能再次根据读指针获取请求的内容长度
@@ -41,6 +41,13 @@ public class RpcDecoder extends ByteToMessageDecoder {
                     return;
                 }
             }
+            int packageType = byteBuf.readInt();
+            if(packageType != PackageType.REQUEST_PACK.getCode() && packageType != PackageType.RESPONSE_PACK.getCode()){
+                // 不是请求或响应包，说明是非法的客户端发来的数据包
+                ctx.close();
+                return;
+            }
+            int serializerCode = byteBuf.readInt();
             //这里对应了RpcProtocol对象的contentLength字段
             int length = byteBuf.readInt();
             //说明剩余的数据包不是完整的，这里需要重置下读索引
@@ -51,7 +58,7 @@ public class RpcDecoder extends ByteToMessageDecoder {
             //这里其实就是实际的RpcProtocol对象的content字段
             byte[] data = new byte[length];
             byteBuf.readBytes(data);
-            RpcProtocol rpcProtocol = new RpcProtocol(data);
+            RpcProtocol rpcProtocol = new RpcProtocol(data, packageType, serializerCode);
             out.add(rpcProtocol);
         }
     }

@@ -5,6 +5,7 @@ import com.castor6.myrpc.framework.core.common.RpcRequest;
 import com.castor6.myrpc.framework.core.common.config.ClientConfig;
 import com.castor6.myrpc.framework.core.registy.URL;
 import com.castor6.myrpc.framework.core.router.MyRouter;
+import com.castor6.myrpc.framework.core.serialize.CommonSerializer;
 
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -30,4 +31,7 @@ public class CommonClientCache {
     public static Set<String> SERVER_ADDRESS = new HashSet<>();     // 记录已连接的服务提供者的地址（ip地址:端口）
 
     public static MyRouter MYROUTER;
+
+    public static CommonSerializer SERIALIZER;
+    public static int SERIALIZERCODE;
 }
