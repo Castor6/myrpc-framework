@@ -1,4 +1,4 @@
-package com.castor6.myrpc.framework.core.registy.zookeeper;
+package com.castor6.myrpc.framework.core.registy;
 
 import com.castor6.myrpc.framework.core.registy.RegistryService;
 import com.castor6.myrpc.framework.core.registy.URL;

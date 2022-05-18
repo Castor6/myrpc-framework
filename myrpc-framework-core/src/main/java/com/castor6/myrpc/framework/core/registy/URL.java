@@ -40,8 +40,8 @@ public class URL {
     }
 
     /**
-     * 将URL转换为写入zk的provider节点下的一段字符串
-     * 主要是记录节点创建的时间，便于监控
+     * 将URL转换为写入zk的provider节点中的一段字符串
+     * 应用名;服务名;主机名（ip）;端口;创建时间;权重（初始是100）;
      * @param url
      * @return
      */
@@ -54,7 +54,7 @@ public class URL {
 
     /**
      * 将URL转换为写入zk的consumer节点下的一段字符串
-     *
+     * 应用名;服务名;主机名（ip）;创建时间;
      * @param url
      * @return
      */

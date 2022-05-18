@@ -123,6 +123,7 @@ public class Server {
         Server server = new Server();
         server.initServerConfig();
         server.exportService(new DataServiceImpl());
+        ApplicationShutdownHook.registryShutdownHook();     // 钩子
         server.startApplication();
     }
 }

@@ -2,6 +2,7 @@ package com.castor6.myrpc.framework.core.client;
 
 import com.castor6.myrpc.framework.core.common.ChannelFutureWrapper;
 import com.castor6.myrpc.framework.core.common.util.CommonUtils;
+import com.castor6.myrpc.framework.core.router.MyRouter;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 
@@ -101,12 +102,12 @@ public class ConnectionHandler {
      * @param providerServiceName
      * @return
      */
-    public static ChannelFuture getChannelFuture(String providerServiceName) {
+    public static ChannelFuture getChannelFuture(String providerServiceName, MyRouter myRouter) {
         List<ChannelFutureWrapper> channelFutureWrappers = CONNECT_MAP.get(providerServiceName);
         if (CommonUtils.isEmptyList(channelFutureWrappers)) {
             throw new RuntimeException("no provider exist for " + providerServiceName);
         }
-        ChannelFuture channelFuture = channelFutureWrappers.get(new Random().nextInt(channelFutureWrappers.size())).getChannelFuture();
+        ChannelFuture channelFuture = myRouter.select(channelFutureWrappers);
         return channelFuture;
     }
 

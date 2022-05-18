@@ -45,6 +45,22 @@ public class MyRpcListenerLoader {
         return null;
     }
 
+    public static void sendSyncEvent(MyRpcEvent myRpcEvent) {
+        if (CommonUtils.isEmptyList(myRpcListenerList)) {
+            return;
+        }
+        for (MyRpcListener<?> myRpcListener : myRpcListenerList) {
+            Class<?> type = getInterfaceT(myRpcListener);
+            if (type.equals(myRpcEvent.getClass())) {
+                try {
+                    myRpcListener.callBack(myRpcEvent.getData());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     public static void sendEvent(MyRpcEvent myRpcEvent) {
         if(CommonUtils.isEmptyList(myRpcListenerList)){
             return;

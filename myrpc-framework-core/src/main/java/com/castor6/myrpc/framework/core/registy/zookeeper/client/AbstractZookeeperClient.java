@@ -1,4 +1,4 @@
-package com.castor6.myrpc.framework.core.registy.zookeeper;
+package com.castor6.myrpc.framework.core.registy.zookeeper.client;
 
 import lombok.Data;
 import org.apache.zookeeper.Watcher;
@@ -132,18 +132,18 @@ public abstract class AbstractZookeeperClient {
 
 
     /**
-     * 监听path路径下某个节点的数据变化
+     * 监听path路径的节点的数据变化
      *
      * @param path
      */
     public abstract void watchNodeData(String path, Watcher watcher);
 
     /**
-     * 监听子节点下的数据变化
+     * 监听path路径下的子节点的变化情况（只包括增删子节点，不包括子节点的数据变化）
      *
      * @param path
      * @param watcher
      */
-    public abstract void watchChildNodeData(String path, Watcher watcher);
+    public abstract void watchChildNode(String path, Watcher watcher);
 
 }

@@ -4,7 +4,10 @@ import com.castor6.myrpc.framework.core.common.event.MyRpcEvent;
 import com.castor6.myrpc.framework.core.common.event.MyRpcListenerLoader;
 import com.castor6.myrpc.framework.core.common.event.update.MyRpcUpdateEvent;
 import com.castor6.myrpc.framework.core.common.event.update.URLChangeWrapper;
+import com.castor6.myrpc.framework.core.registy.AbstractRegister;
 import com.castor6.myrpc.framework.core.registy.URL;
+import com.castor6.myrpc.framework.core.registy.zookeeper.client.AbstractZookeeperClient;
+import com.castor6.myrpc.framework.core.registy.zookeeper.client.CuratorZookeeperClient;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
@@ -83,11 +86,12 @@ public class ZookeeperRegister extends AbstractRegister {
     public void doAfterSubscribe(URL url) {
         //监听是否有新的服务注册
         String newServerNodePath = ROOT + "/" + url.getServiceName() + "/provider";
-        watchChildNodeData(newServerNodePath);
+        watchChildNode(newServerNodePath);
     }
 
-    public void watchChildNodeData(String newServerNodePath){
-        zkClient.watchChildNodeData(newServerNodePath, new Watcher() {
+    // 为了能重复监听，所以需要定义一个递归方法
+    public void watchChildNode(String newServerNodePath){
+        zkClient.watchChildNode(newServerNodePath, new Watcher() {
             @Override
             public void process(WatchedEvent watchedEvent) {
                 System.out.println(watchedEvent);
@@ -104,7 +108,7 @@ public class ZookeeperRegister extends AbstractRegister {
                 MyRpcEvent myRpcEvent = new MyRpcUpdateEvent(urlChangeWrapper);
                 MyRpcListenerLoader.sendEvent(myRpcEvent);      // 深入怎么异步处理更新服务的服务提供者连接列表
                 // 收到回调之后再注册一次监听，这样能保证一直都收到通知
-                watchChildNodeData(path);
+                watchChildNode(path);
             }
         });
     }

@@ -6,7 +6,7 @@ import com.castor6.myrpc.framework.core.common.event.MyRpcEvent;
  * @author castor6
  * @version v1.0
  * @create 2022-05-17 16:30
- * @Description 节点更新事件（之所以不直接将数据拆开放入事件类中，是为了通用事件，分别定义数据类）
+ * @Description 服务调用方更新本地缓存的服务的服务提供方列表事件（之所以不直接将数据拆开放入事件类中，是为了通用事件，分别定义数据类）
  */
 public class MyRpcUpdateEvent implements MyRpcEvent {
 

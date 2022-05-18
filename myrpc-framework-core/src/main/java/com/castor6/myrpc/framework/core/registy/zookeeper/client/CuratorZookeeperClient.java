@@ -1,5 +1,6 @@
-package com.castor6.myrpc.framework.core.registy.zookeeper;
+package com.castor6.myrpc.framework.core.registy.zookeeper.client;
 
+import com.castor6.myrpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -185,7 +186,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient {
     }
 
     @Override
-    public void watchChildNodeData(String path, Watcher watcher) {
+    public void watchChildNode(String path, Watcher watcher) {
         try {
             client.getChildren().usingWatcher(watcher).forPath(path);
         } catch (Exception e) {
@@ -207,7 +208,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient {
 //                    }
 //                });
         ZookeeperRegister zookeeperRegister = new ZookeeperRegister("localhost:2181");
-        zookeeperRegister.watchChildNodeData("/test");
+        zookeeperRegister.watchChildNode("/test");
         try {
             Thread.sleep(600 * 1000);
         } catch (InterruptedException e) {

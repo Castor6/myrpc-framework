@@ -4,7 +4,7 @@ package com.castor6.myrpc.framework.core.common.config;
  * @author castor6
  * @version v1.0
  * @create 2022-05-17 18:25
- * @Description
+ * @Description 客户端和服务端先暂时共用一个配置文件
  */
 
 import java.io.IOException;
@@ -17,6 +17,7 @@ public class PropertiesBootstrap {
     public static final String REGISTER_ADDRESS = "myrpc.registerAddr";
     public static final String APPLICATION_NAME = "myrpc.applicationName";
     public static final String PROXY_TYPE = "myrpc.proxyType";
+    public static final String ROUTE = "myrpc.router";
 
     public static ServerConfig loadServerConfigFromLocal() {
         try {
@@ -41,6 +42,7 @@ public class PropertiesBootstrap {
         clientConfig.setApplicationName(PropertiesLoader.getPropertiesStr(APPLICATION_NAME));
         clientConfig.setRegisterAddr(PropertiesLoader.getPropertiesStr(REGISTER_ADDRESS));
         clientConfig.setProxyType(PropertiesLoader.getPropertiesStr(PROXY_TYPE));
+        clientConfig.setRouterStrategy(PropertiesLoader.getPropertiesStr(ROUTE));
         return clientConfig;
     }
 

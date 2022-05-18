@@ -19,7 +19,7 @@ public class ChannelFutureWrapper {
 
     private Integer port;
 
-    private Integer weight;
+    private Integer weight;     // 权重用于负载均衡
 
     private String group;
 

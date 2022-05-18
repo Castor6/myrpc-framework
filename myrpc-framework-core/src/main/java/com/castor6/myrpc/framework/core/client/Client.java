@@ -12,8 +12,11 @@ import com.castor6.myrpc.framework.core.common.util.CommonUtils;
 import com.castor6.myrpc.framework.core.proxy.javassist.JavassistProxyFactory;
 import com.castor6.myrpc.framework.core.proxy.jdk.JDKProxyFactory;
 import com.castor6.myrpc.framework.core.registy.URL;
-import com.castor6.myrpc.framework.core.registy.zookeeper.AbstractRegister;
+import com.castor6.myrpc.framework.core.registy.AbstractRegister;
 import com.castor6.myrpc.framework.core.registy.zookeeper.ZookeeperRegister;
+import com.castor6.myrpc.framework.core.router.MyRandomRouter;
+import com.castor6.myrpc.framework.core.router.MyRotateRouter;
+import com.castor6.myrpc.framework.core.router.MyRouter;
 import com.castor6.myrpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
@@ -29,6 +32,8 @@ import java.util.List;
 
 import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SEND_QUEUE;
 import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SUBSCRIBE_SERVICE_LIST;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.RANDOM_ROUTER_TYPE;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.ROTATE_ROUTER_TYPE;
 
 /**
  * @author castor6
@@ -52,6 +57,8 @@ public class Client {
     private AbstractRegister register;
 
     private MyRpcListenerLoader myRpcListenerLoader;
+
+    private MyRouter myRouter;
 
     private Bootstrap bootstrap = new Bootstrap();
 
@@ -86,6 +93,13 @@ public class Client {
         myRpcListenerLoader.init();
         // 初始化客户端的配置
         this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
+        // 初始化路由策略
+        String routerStrategy = clientConfig.getRouterStrategy();
+        if (RANDOM_ROUTER_TYPE.equals(routerStrategy)) {
+            myRouter = new MyRandomRouter();
+        } else if (ROTATE_ROUTER_TYPE.equals(routerStrategy)) {
+            myRouter = new MyRotateRouter();
+        }
         // 初始化代理方式
         RpcFactory rpcFactory;
         if ("javassist".equals(clientConfig.getProxyType())) {
@@ -158,7 +172,7 @@ public class Client {
                     RpcRequest data = SEND_QUEUE.take();
                     String json = JSON.toJSONString(data);
                     RpcProtocol rpcProtocol = new RpcProtocol(json.getBytes());
-                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getServiceName());    // 负载均衡获取服务提供方的连接
+                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getServiceName(), myRouter);    // 负载均衡获取服务提供方的连接
                     channelFuture.channel().writeAndFlush(rpcProtocol);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -166,7 +180,6 @@ public class Client {
             }
         }
     }
-
 
     public static void main(String[] args) throws Throwable {
         Client client = new Client();

@@ -4,6 +4,7 @@ import com.castor6.myrpc.framework.core.common.ChannelFutureWrapper;
 import com.castor6.myrpc.framework.core.common.RpcRequest;
 import com.castor6.myrpc.framework.core.common.config.ClientConfig;
 import com.castor6.myrpc.framework.core.registy.URL;
+import com.castor6.myrpc.framework.core.router.MyRouter;
 
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -28,4 +29,5 @@ public class CommonClientCache {
     public static Map<String, List<URL>> URL_MAP = new ConcurrentHashMap<>();   // 服务名称 --> 该服务有哪些集群URL（包括应用名称、ip、端口号、权重（应该是路由层使用的东西）等）
     public static Set<String> SERVER_ADDRESS = new HashSet<>();     // 记录已连接的服务提供者的地址（ip地址:端口）
 
+    public static MyRouter MYROUTER;
 }
