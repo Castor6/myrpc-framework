@@ -3,27 +3,32 @@ package com.castor6.myrpc.framework.core.client;
 import com.alibaba.fastjson.JSON;
 import com.castor6.myrpc.framework.core.common.RpcDecoder;
 import com.castor6.myrpc.framework.core.common.RpcEncoder;
-import com.castor6.myrpc.framework.core.common.RpcRequest;
 import com.castor6.myrpc.framework.core.common.RpcProtocol;
-import com.castor6.myrpc.framework.core.config.ClientConfig;
+import com.castor6.myrpc.framework.core.common.RpcRequest;
+import com.castor6.myrpc.framework.core.common.config.ClientConfig;
+import com.castor6.myrpc.framework.core.common.config.PropertiesBootstrap;
+import com.castor6.myrpc.framework.core.common.event.MyRpcListenerLoader;
+import com.castor6.myrpc.framework.core.common.util.CommonUtils;
+import com.castor6.myrpc.framework.core.proxy.javassist.JavassistProxyFactory;
 import com.castor6.myrpc.framework.core.proxy.jdk.JDKProxyFactory;
+import com.castor6.myrpc.framework.core.registy.URL;
+import com.castor6.myrpc.framework.core.registy.zookeeper.AbstractRegister;
+import com.castor6.myrpc.framework.core.registy.zookeeper.ZookeeperRegister;
 import com.castor6.myrpc.framework.interfaces.DataService;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.castor6.myrpc.framework.core.cache.CommonClientCache.SEND_QUEUE;
-import static com.castor6.myrpc.framework.core.constants.RpcConstants.DEFAULT_DECODE_CHAR;
+import java.util.List;
+
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SEND_QUEUE;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SUBSCRIBE_SERVICE_LIST;
 
 /**
  * @author castor6
@@ -38,94 +43,146 @@ import static com.castor6.myrpc.framework.core.constants.RpcConstants.DEFAULT_DE
  */
 public class Client {
 
+    private Logger logger = LoggerFactory.getLogger(Client.class);
+
     public static EventLoopGroup clientGroup = new NioEventLoopGroup();
-    private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
     private ClientConfig clientConfig;
+
+    private AbstractRegister register;
+
+    private MyRpcListenerLoader myRpcListenerLoader;
+
+    private Bootstrap bootstrap = new Bootstrap();
+
+    public Bootstrap getBootstrap() {
+        return bootstrap;
+    }
 
     public ClientConfig getClientConfig() {
         return clientConfig;
     }
 
+
     public void setClientConfig(ClientConfig clientConfig) {
         this.clientConfig = clientConfig;
     }
 
-    public RpcFactory startClientApplication() throws InterruptedException {
+    public RpcFactory initClientApplication() {
+        // netty相关初始化
         EventLoopGroup clientGroup = new NioEventLoopGroup();
-        Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(clientGroup);
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
-                //管道中初始化一些逻辑，这里包含了上边所说的编解码器和客户端响应类
                 ch.pipeline().addLast(new RpcEncoder());
                 ch.pipeline().addLast(new RpcDecoder());
                 ch.pipeline().addLast(new ClientHandler());
             }
         });
-        //常规的链接netty服务端
-        ChannelFuture channelFuture = bootstrap.connect(clientConfig.getServerAddr(), clientConfig.getPort()).sync();
-        logger.info("============ 服务启动 ============");
-        this.startClient(channelFuture);
-        //这里注入了一个代理工厂，这个代理类在下文会仔细介绍
-        RpcFactory rpcReference = new RpcFactory(new JDKProxyFactory());
-        return rpcReference;
+        // 监听器加载器相关初始化（监听器是负责处理某类型事件的，加载器负责加载这些监听器）
+        myRpcListenerLoader = new MyRpcListenerLoader();
+        myRpcListenerLoader.init();
+        // 初始化客户端的配置
+        this.clientConfig = PropertiesBootstrap.loadClientConfigFromLocal();
+        // 初始化代理方式
+        RpcFactory rpcFactory;
+        if ("javassist".equals(clientConfig.getProxyType())) {
+            rpcFactory = new RpcFactory(new JavassistProxyFactory());
+        } else {
+            rpcFactory = new RpcFactory(new JDKProxyFactory());
+        }
+        return rpcFactory;
+    }
+
+    /**
+     * 启动服务之前需要预先订阅对应的服务
+     *
+     * @param serviceBean
+     */
+    public void doSubscribeService(Class serviceBean) {
+        if (register == null) {
+            register = new ZookeeperRegister(clientConfig.getRegisterAddr());
+        }
+        URL url = new URL();
+        url.setApplicationName(clientConfig.getApplicationName());
+        url.setServiceName(serviceBean.getName());
+        url.addParameter("host", CommonUtils.getIpAddress());
+        register.subscribe(url);
+    }
+
+    /**
+     * 开始和各个服务的所有provider建立连接，
+     * 但具体是发送调用请求给服务的哪个provider就是负载均衡考虑的事情了
+     * 至于说担心与所有的Provider都建立连接，会不会增加开销的负担
+     * 若是要发送调用请求才建立连接，面对一些突发流量的话，容易导致调用堆积
+     */
+    public void doConnectServer() {
+        for (String serviceName : SUBSCRIBE_SERVICE_LIST) {
+            List<String> providerIps = register.getProviderIps(serviceName);
+            for (String providerIp : providerIps) {
+                try {
+                    ConnectionHandler.connect(serviceName, providerIp);
+                } catch (InterruptedException e) {
+                    logger.error("[doConnectServer] connect fail ", e);
+                }
+            }
+            URL url = new URL();
+            url.setServiceName(serviceName);
+            register.doAfterSubscribe(url);     // 监听服务提供者的动态上下线
+        }
+    }
+
+
+    /**
+     * 开启发送线程，专门负责发送调用请求
+     *
+     * @param
+     */
+    public void startClient() {
+        Thread asyncSendJob = new Thread(new AsyncSendJob());
+        asyncSendJob.start();
+    }
+
+    class AsyncSendJob implements Runnable {
+
+        public AsyncSendJob() {
+        }
+
+        @Override
+        public void run() {
+            while (true) {  // 负责发送请求
+                try {
+                    //阻塞模式
+                    RpcRequest data = SEND_QUEUE.take();
+                    String json = JSON.toJSONString(data);
+                    RpcProtocol rpcProtocol = new RpcProtocol(json.getBytes());
+                    ChannelFuture channelFuture = ConnectionHandler.getChannelFuture(data.getServiceName());    // 负载均衡获取服务提供方的连接
+                    channelFuture.channel().writeAndFlush(rpcProtocol);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
 
     public static void main(String[] args) throws Throwable {
         Client client = new Client();
-        ClientConfig clientConfig = new ClientConfig();
-        clientConfig.setPort(9090);
-        clientConfig.setServerAddr("localhost");
-        client.setClientConfig(clientConfig);
-        RpcFactory rpcReference = client.startClientApplication();
-        DataService dataService = rpcReference.get(DataService.class);
-        String result = dataService.sendData("test");
-        System.out.println(result);
-//        for(int i=0;i<100;i++){
-//
-//        }
-    }
-
-    /**
-     * 开启发送线程，专门从事将数据包发送给服务端，起到一个解耦的效果
-     * @param channelFuture
-     */
-    private void startClient(ChannelFuture channelFuture) {
-        Thread asyncSendJob = new Thread(new AsyncSendJob(channelFuture));
-        asyncSendJob.start();
-    }
-
-    /**
-     * 异步发送信息任务
-     *
-     */
-    class AsyncSendJob implements Runnable {
-
-        private ChannelFuture channelFuture;
-
-        public AsyncSendJob(ChannelFuture channelFuture) {
-            this.channelFuture = channelFuture;
-        }
-
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    //阻塞模式
-                    RpcRequest data = SEND_QUEUE.take();
-                    //将rpcRequest封装到RpcProtocol对象中，然后发送给服务端，这里正好对应了上文中的ServerHandler
-                    String json = JSON.toJSONString(data);
-                    RpcProtocol rpcProtocol = new RpcProtocol(json.getBytes());
-
-                    //netty的通道负责发送数据给服务端
-                    channelFuture.channel().writeAndFlush(rpcProtocol);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+        RpcFactory rpcFactory = client.initClientApplication();
+        DataService dataService = rpcFactory.get(DataService.class);
+        client.doSubscribeService(DataService.class);
+        ConnectionHandler.setBootstrap(client.getBootstrap());
+        client.doConnectServer();
+        client.startClient();
+        for (int i = 0; i < 100; i++) {
+            try {
+                String result = dataService.sendData("test");
+                System.out.println(result);
+                Thread.sleep(1000);
+            }catch (Exception e){
+                e.printStackTrace();
             }
         }
     }

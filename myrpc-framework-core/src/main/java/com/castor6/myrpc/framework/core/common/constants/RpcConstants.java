@@ -1,4 +1,4 @@
-package com.castor6.myrpc.framework.core.constants;
+package com.castor6.myrpc.framework.core.common.constants;
 
 /**
  * @author castor6

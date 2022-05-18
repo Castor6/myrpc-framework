@@ -8,8 +8,8 @@ import java.lang.reflect.Method;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import static com.castor6.myrpc.framework.core.cache.CommonClientCache.RESP_MAP;
-import static com.castor6.myrpc.framework.core.cache.CommonClientCache.SEND_QUEUE;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.RESP_MAP;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.SEND_QUEUE;
 
 /**
  * @author castor6

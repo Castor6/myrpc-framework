@@ -9,7 +9,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
-import static com.castor6.myrpc.framework.core.cache.CommonClientCache.RESP_MAP;
+import static com.castor6.myrpc.framework.core.common.cache.CommonClientCache.RESP_MAP;
 
 /**
  * @author castor6

@@ -6,10 +6,9 @@ import com.castor6.myrpc.framework.core.common.RpcResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static com.castor6.myrpc.framework.core.cache.CommonServerCache.PROVIDER_CLASS_MAP;
+import static com.castor6.myrpc.framework.core.common.cache.CommonServerCache.PROVIDER_CLASS_MAP;
 
 /**
  * @author castor6

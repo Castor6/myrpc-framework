@@ -6,7 +6,7 @@ import lombok.ToString;
 
 import java.io.Serializable;
 
-import static com.castor6.myrpc.framework.core.constants.RpcConstants.MAGIC_NUMBER;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.MAGIC_NUMBER;
 
 /**
  * @author castor6

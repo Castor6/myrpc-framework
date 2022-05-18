@@ -4,8 +4,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-import static com.castor6.myrpc.framework.core.constants.RpcConstants.DEFAULT_DECODE_CHAR;
-
 /**
  * @author castor6
  * @version v1.0

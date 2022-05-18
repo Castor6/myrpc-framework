@@ -6,7 +6,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
-import static com.castor6.myrpc.framework.core.constants.RpcConstants.MAGIC_NUMBER;
+import static com.castor6.myrpc.framework.core.common.constants.RpcConstants.MAGIC_NUMBER;
 
 
 /**

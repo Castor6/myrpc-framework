@@ -15,7 +15,6 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String sendData(String body) {
-        int x = 10 / 0;
         System.out.println("己收到的参数长度："+body.length());
         return "success";
     }
